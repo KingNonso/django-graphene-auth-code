@@ -37,7 +37,7 @@ class Register(MutationMixin, DynamicArgsMixin, RegisterMixin, graphene.Mutation
 
 
 class VerifyAccount(MutationMixin, DynamicArgsMixin, VerifyAccountMixin, graphene.Mutation):
-    _required_args = ["token"]
+    _required_args = ["token", "email"]
     __doc__ = VerifyAccountMixin.__doc__
 
 

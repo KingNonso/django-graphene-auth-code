@@ -131,7 +131,8 @@ class VerifyAccountMixin(SuccessErrorsOutput):
     def resolve_mutation(cls, root, info, **kwargs):
         try:
             token = kwargs.get("token")
-            UserStatus.verify(token)
+            email = kwargs.get("email")
+            UserStatus.verify(email, token)
             return cls(success=True)
         except UserAlreadyVerifiedError:
             return cls(success=False, errors=Messages.ALREADY_VERIFIED)

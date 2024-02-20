@@ -77,6 +77,11 @@ class OTPCode(models.Model):
         token = OTPCode.objects.create(user=user, email=user.email)
         return token
 
+    @classmethod
+    def verify_token_code(cls, email, token):
+        token = OTPCode.objects.get(email=email, code=token)
+        return token
+
 
 class UserStatus(models.Model):
     """
