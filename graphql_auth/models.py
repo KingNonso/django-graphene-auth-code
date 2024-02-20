@@ -1,4 +1,5 @@
 import time
+import string
 
 from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
@@ -7,6 +8,7 @@ from django.core.mail import send_mail
 from django.db import models, transaction
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.utils.crypto import get_random_string
 
 from .constants import TokenAction
 from .exceptions import EmailAlreadyInUseError, UserAlreadyVerifiedError, WrongUsageError
@@ -15,6 +17,65 @@ from .signals import user_verified
 from .utils import get_token, get_token_payload
 
 UserModel = get_user_model()
+
+
+class OTPCode(models.Model):
+    """
+    Model to store the One Time Pass verification code that is sent to the email.
+    """
+    user = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="otp"
+    )
+    email = models.EmailField(
+        "email",
+        max_length=255,
+        blank=False,
+        null=False,
+        help_text="The email to which the code was sent.",
+    )
+    code = models.CharField(max_length=6)
+    used = models.BooleanField(default=False)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.code
+
+    class Meta:
+        verbose_name = "verification code"
+        verbose_name_plural = "verification codes"
+        ordering = ["-created"]
+
+    def generate_numeric_code(self, length=6):
+        """
+        Generate a random 6 digit string of numbers.
+        We use this formatting to allow leading 0s.
+        """
+        otp = get_random_string(length, allowed_chars=string.digits)
+        # Check if the code already exists in the database
+        if OTPCode.objects.filter(code=otp).exists():
+            # Entity with the same code attribute exists, so generate a new one
+            self.generate_numeric_code(length)
+        return otp
+    
+    def save(self, *args, **kwargs):
+        """
+        Override the save method to generate a numeric code.
+        """
+        length = 6
+        if not self.code:
+            self.code = self.generate_numeric_code(length)
+        # Check if the email already exists in the database
+        if self.pk is None and OTPCode.objects.filter(email=self.email).exists():
+            # Entity with the same attributes exists, hence mark them all as used
+            OTPCode.objects.filter(email=self.email).update(used=True)
+            
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_token_code(user):
+        token = OTPCode.objects.create(user=user, email=user.email)
+        return token
 
 
 class UserStatus(models.Model):
@@ -45,7 +106,8 @@ class UserStatus(models.Model):
         )
 
     def get_email_context(self, info, path, action, **kwargs):
-        token = get_token(self.user, action, **kwargs)
+        # token = get_token(self.user, action, **kwargs)
+        token = OTPCode.get_token_code(self.user)
         site = get_current_site(info.context)
         return {
             "user": self.user,
