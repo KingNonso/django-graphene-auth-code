@@ -73,7 +73,7 @@ class OTPCode(models.Model):
         super().save(*args, **kwargs)
     
     @classmethod
-    def get_token_code(user):
+    def get_token_code(cls, user):
         token = OTPCode.objects.create(user=user, email=user.email)
         return token
 
