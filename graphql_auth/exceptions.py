@@ -50,7 +50,7 @@ class EmailAlreadyInUseError(GraphQLAuthError):
 
 
 class TokenScopeError(GraphQLAuthError):
-    default_message = _("This token if for something else.")
+    default_message = _("This OTP token is wrong or has expired.")
 
 
 class PasswordAlreadySetError(GraphQLAuthError):

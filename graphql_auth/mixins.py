@@ -24,7 +24,7 @@ from .exceptions import (
     WrongUsageError,
 )
 from .forms import EmailForm, PasswordLessRegisterForm, RegisterForm, UpdateAccountForm
-from .models import UserStatus
+from .models import OTPCode, UserStatus
 from .queries import UserNode
 from .settings import graphql_auth_settings as app_settings
 from .shortcuts import async_email_func, get_user_by_email, get_user_to_login
@@ -273,12 +273,16 @@ class PasswordResetMixin(SuccessErrorsOutput):
     def resolve_mutation(cls, root, info, **kwargs):
         try:
             token = kwargs.pop("token")
-            payload = get_token_payload(
-                token,
-                TokenAction.PASSWORD_RESET,
-                app_settings.EXPIRATION_PASSWORD_RESET_TOKEN,
-            )
-            user = UserModel._default_manager.get(**payload)
+            email = kwargs.pop("email")
+            payload = OTPCode.verify_token_code(email, token, app_settings.EXPIRATION_ACTIVATION_TOKEN)
+            
+            # payload = get_token_payload(
+            #     token,
+            #     TokenAction.PASSWORD_RESET,
+            #     app_settings.EXPIRATION_PASSWORD_RESET_TOKEN,
+            # )
+            user = payload.user
+            # user = UserModel._default_manager.get(**payload)
             f = cls.form(user, kwargs)
             if f.is_valid():
                 revoke_user_refresh_token(user)
@@ -287,6 +291,8 @@ class PasswordResetMixin(SuccessErrorsOutput):
                 if user.status.verified is False:  # type: ignore
                     user.status.verified = True  # type: ignore
                     user.status.save(update_fields=["verified"])  # type: ignore
+                    payload.used = True
+                    payload.save(update_fields=['used'])
                     user_verified.send(sender=cls, user=user)
 
                 return cls(success=True)
@@ -316,12 +322,15 @@ class PasswordSetMixin(SuccessErrorsOutput):
     def resolve_mutation(cls, root, info, **kwargs):
         try:
             token = kwargs.pop("token")
-            payload = get_token_payload(
-                token,
-                TokenAction.PASSWORD_SET,
-                app_settings.EXPIRATION_PASSWORD_SET_TOKEN,
-            )
-            user = UserModel._default_manager.get(**payload)
+            email = kwargs.pop("email")
+            payload = OTPCode.verify_token_code(email, token, app_settings.EXPIRATION_ACTIVATION_TOKEN)
+            user = payload.user
+            # payload = get_token_payload(
+            #     token,
+            #     TokenAction.PASSWORD_SET,
+            #     app_settings.EXPIRATION_PASSWORD_SET_TOKEN,
+            # )
+            # user = UserModel._default_manager.get(**payload)
             f = cls.form(user, kwargs)
             if f.is_valid():
                 # Check if user has already set a password

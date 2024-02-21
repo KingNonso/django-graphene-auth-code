@@ -74,12 +74,12 @@ class RemoveSecondaryEmail(MutationMixin, DynamicArgsMixin, RemoveSecondaryEmail
 
 
 class PasswordSet(MutationMixin, PasswordSetMixin, DynamicArgsMixin, graphene.Mutation):
-    _required_args = ["token", "new_password1", "new_password2"]
+    _required_args = ["email", "token", "new_password1", "new_password2"]
     __doc__ = PasswordSetMixin.__doc__
 
 
 class PasswordReset(MutationMixin, DynamicArgsMixin, PasswordResetMixin, graphene.Mutation):
-    _required_args = ["token", "new_password1", "new_password2"]
+    _required_args = ["email", "token", "new_password1", "new_password2"]
     __doc__ = PasswordResetMixin.__doc__
 
 

@@ -15,16 +15,16 @@ def get_version(package):
 
 
 setup(
-    name="django-graphene-auth",
+    name="django-graphene-auth-code",
     version=get_version("graphql_auth"),
     license="MIT",
     description="Graphql and relay authentication with Graphene for Django.",
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    author="ptbang",
-    author_email="ptbang@gmail.com",
-    maintainer="ptbang",
-    url="https://github.com/ptbang/django-graphene-auth",
+    author="Chinonso Ani",
+    author_email="achinonso@gmail.com",
+    maintainer="Chinonso Ani",
+    url="https://github.com/kingnonso/django-graphene-auth-code",
     project_urls=OrderedDict((("Documentation", "https://django-graphene-auth.readthedocs.io/en/latest/"),)),
     packages=find_packages(exclude=["test*"]),
     install_requires=[
@@ -50,6 +50,6 @@ setup(
         "Framework :: Django :: 5.0",
     ],
     keywords="api graphql rest relay graphene auth jwt",
-    zip_safe=False,
+    zip_safe=True,
     include_package_data=True,
 )

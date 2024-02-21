@@ -11,7 +11,7 @@ from django.utils.html import strip_tags
 from django.utils.crypto import get_random_string
 
 from .constants import TokenAction
-from .exceptions import EmailAlreadyInUseError, UserAlreadyVerifiedError, WrongUsageError
+from .exceptions import EmailAlreadyInUseError, UserAlreadyVerifiedError, WrongUsageError, TokenScopeError
 from .settings import graphql_auth_settings as app_settings
 from .signals import user_verified
 from .utils import get_token, get_token_payload
@@ -78,9 +78,13 @@ class OTPCode(models.Model):
         return token
 
     @classmethod
-    def verify_token_code(cls, email, token):
-        token = OTPCode.objects.get(email=email, code=token)
-        return token
+    def verify_token_code(cls, email, token, timestamp):
+        token = OTPCode.objects.filter(email=email, code=token, used=False)
+        if token.exists():
+            # Todo: commute datetime comparison to check if token has expired
+            return token.first()
+        raise TokenScopeError    
+        
 
 
 class UserStatus(models.Model):
@@ -181,13 +185,17 @@ class UserStatus(models.Model):
                 raise EmailAlreadyInUseError
 
     @classmethod
-    def verify(cls, token):
-        payload = get_token_payload(token, TokenAction.ACTIVATION, app_settings.EXPIRATION_ACTIVATION_TOKEN)
-        user = UserModel._default_manager.get(**payload)
+    def verify(cls, email, token):
+        # payload = get_token_payload(token, TokenAction.ACTIVATION, app_settings.EXPIRATION_ACTIVATION_TOKEN)
+        payload = OTPCode.verify_token_code(email, token, app_settings.EXPIRATION_ACTIVATION_TOKEN)
+        #user = UserModel._default_manager.get(**payload)
+        user = payload.user
         user_status = cls.objects.get(user=user)
         if user_status.verified is False:
             user_status.verified = True
             user_status.save(update_fields=["verified"])
+            payload.used = True
+            payload.save(update_fields=['used'])
             user_verified.send(sender=cls, user=user)
         else:
             raise UserAlreadyVerifiedError
